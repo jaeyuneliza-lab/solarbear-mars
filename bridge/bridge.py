@@ -48,7 +48,7 @@ CONFIG_LABEL = os.environ.get("STUDIO_CONFIG_LABEL", "#22")
 MOCK = os.environ.get("MOCK", "").lower() in ("1", "true", "yes") or not KEY
 PORT = int(os.environ.get("PORT", "8770"))
 WEBHOOK = os.environ.get("NOTIFY_WEBHOOK_URL", "").strip()
-POLL_S = 5
+POLL_S = 3
 JOB_LIMIT_S = 20 * 60
 MAX_PDF = 50 * 1024 * 1024
 
@@ -153,9 +153,117 @@ def run_job(fid, run):
         time.sleep(POLL_S)
         job = api("GET", f"/responses/{jid}?include=all")
         run["studio_status"] = job.get("status")
+        run["stages"] = stage_view(job)
     if job.get("status") != "completed":
         raise StudioError(f"job {jid} {job.get('status')}: {json.dumps(job.get('error'))[:300]}")
+    run["stages"] = stage_view(job)
     return job
+
+
+# ---------- node progress for the page ----------
+
+# The setting #22 graph in order; key, label, how an output item is recognised (step_type or a name fragment)
+STAGES = [
+    ("parse", "Parse documents", "document-parse"),
+    ("classify", "Classify document types", "document-classify"),
+    ("extract", "Extract fields", "information-extract"),
+    ("merge", "Merge the case file", "merge"),
+    ("review", "Review claims C1–C8", "증빙 검토"),
+    ("final", "Decide adequacy", "최종 판정"),
+    ("follow", "Draft the follow-up", "후속 문서"),
+    ("validate", "Validate before release", "validate"),
+]
+
+
+def stage_of(item):
+    t, name = item.get("step_type") or "", item.get("model") or ""
+    for key, _, sign in STAGES:
+        if t == sign or (t == "instruct" and sign in name):
+            return key
+    return None
+
+
+def stage_detail(key, items):
+    texts = [c.get("text") for it in items for c in it.get("content") or []]
+    objs = [d for t in texts for o in loose_json(t) for d in flatten(o)]
+    if key == "parse":
+        pr = next((it.get("progress") for it in items if it.get("progress")), None)
+        return f"{pr['total']} pages" if pr and pr.get("total") else ""
+    if key == "classify":
+        kinds = sorted({t for t in texts if isinstance(t, str) and re.fullmatch(r"[a-z_]+", t)})
+        return f"{len(kinds)} document types" if kinds else ""
+    if key == "extract":
+        return f"{len(items)} documents"
+    if key == "review":
+        claims = next((d["claims"] for d in objs if isinstance(d.get("claims"), list)), [])
+        if claims:
+            bad = sum(1 for c in claims if str(c.get("status", "")).lower() == "contradicted")
+            return f"{len(claims)} claims · {bad} contradicted"
+    if key == "final":
+        d = next((d for d in objs if "overall_status" in d and "C1_status" in d), None)
+        return d["overall_status"] if d else ""
+    if key == "follow":
+        d = next((d for d in objs if "follow_up_type" in d), None)
+        return d["follow_up_type"] if d else ""
+    return ""
+
+
+def stage_view(job):
+    """[{key, label, state: pending|running|done, secs, detail, cached}] from the outputs so far."""
+    groups = {}
+    for it in job.get("output") or []:
+        k = stage_of(it)
+        if k:
+            groups.setdefault(k, []).append(it)
+    out, running_seen = [], False
+    finished = job.get("status") == "completed"
+    for key, label, _ in STAGES:
+        items = groups.get(key, [])
+        done = bool(items) and (finished or all(it.get("status") == "completed" for it in items))
+        st = {"key": key, "label": label, "state": "pending", "secs": None, "detail": "", "cached": False}
+        if items:
+            st["state"] = "done" if done else "running"
+            t0 = min(it.get("created_at") or 0 for it in items)
+            t1 = max(it.get("updated_at") or 0 for it in items)
+            st["secs"] = max(0, t1 - t0) if t0 else None
+            avs = [c.get("additional_values") for it in items for c in it.get("content") or []]
+            st["cached"] = any('"cache_hit": true' in a for a in avs if isinstance(a, str))
+            st["detail"] = stage_detail(key, items) if done else ""
+        out.append(st)
+    # the first stage without output is the one Studio is working on now
+    if not finished:
+        for st in out:
+            if st["state"] == "running":
+                running_seen = True
+                break
+            if st["state"] == "pending":
+                st["state"] = "running"
+                break
+    return out
+
+
+def mock_stages(case, elapsed):
+    """Paced stage view for mock mode, using the stored outputs for the details."""
+    pace = [2, 2, 3, 1, 6, 3, 3, 1]
+    fin, fol, rev = case.get("final") or {}, case.get("follow") or {}, case.get("review") or {}
+    claims = rev.get("claims") or []
+    details = {
+        "parse": "", "classify": f"{len(case.get('ex') or {})} document types",
+        "extract": f"{sum(len(v) for v in (case.get('ex') or {}).values())} documents",
+        "merge": "", "validate": "",
+        "review": f"{len(claims)} claims · {sum(1 for c in claims if str(c.get('status','')).lower() == 'contradicted')} contradicted" if claims else "",
+        "final": fin.get("overall_status", ""), "follow": fol.get("follow_up_type", ""),
+    }
+    out, t = [], 0
+    for (key, label, _), d in zip(STAGES, pace):
+        st = {"key": key, "label": label, "state": "pending", "secs": None, "detail": "", "cached": False}
+        if elapsed >= t + d:
+            st.update(state="done", secs=d, detail=details[key])
+        elif elapsed >= t:
+            st["state"] = "running"
+        out.append(st)
+        t += d
+    return out, t
 
 
 # ---------- turning step outputs into a case ----------
@@ -336,8 +444,14 @@ def do_run(rid, pdf, name):
         img, cap = plume_image(pdf)
         if MOCK:
             run.update(state="uploading"); time.sleep(1.5)
-            run.update(state="studio", studio_status="in_progress"); time.sleep(6)
             key, stored = mock_job(name)
+            run.update(state="studio", studio_status="in_progress")
+            t0 = time.time()
+            while True:
+                run["stages"], total = mock_stages(stored, time.time() - t0)
+                if time.time() - t0 >= total:
+                    break
+                time.sleep(0.5)
             case = {k: stored.get(k) for k in ("ex", "final", "follow", "review")}
             case.update(id=key, job=stored.get("job"), mock=True)
         else:
