@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 2 204 196" role="img" aria-label="Solar Bear symbol: half polar bear, half sun">
+  <defs>
+    <filter id="sbWob" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="4"/>
+      <feDisplacementMap in="SourceGraphic" scale="2.6"/>
+    </filter>
+    <filter id="sbWash" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="4" seed="11" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.1 1.15" result="m"/>
+      <feComposite in="SourceGraphic" in2="m" operator="in" result="tex"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="tex"/></feMerge>
+      <feDisplacementMap in2="n" scale="3"/>
+    </filter>
+    <linearGradient id="sbIce" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#f6f9fd"/>
+      <stop offset=".45" stop-color="#d7e7f6"/>
+      <stop offset=".8" stop-color="#a8c6ea"/>
+      <stop offset="1" stop-color="#9aa9e6"/>
+    </linearGradient>
+    <linearGradient id="sbSun" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#fdab2a"/>
+      <stop offset=".55" stop-color="#f99516"/>
+      <stop offset="1" stop-color="#f17d0c"/>
+    </linearGradient>
+    <clipPath id="sbRight"><path d="M200,-20 H104 C97,44 112,56 104,70 C100,78 114,82 122,90 C126,95 118,100 110,102 C104,105 113,112 110,120 C105,138 113,152 106,220 H220 V-20 Z"/></clipPath>
+    <linearGradient id="sbRay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd447"/><stop offset="1" stop-color="#fbbd2a"/></linearGradient>
+    <clipPath id="sbOval"><ellipse cx="100" cy="100" rx="82" ry="74"/></clipPath>
+    <!-- profile line: bear brow, snout with nose, chin -->
+    <path id="sbProfile" d="M104,26 C97,44 112,56 104,70 C100,78 114,82 122,90 C126,95 118,100 110,102 C104,105 113,112 110,120 C105,138 113,152 106,174"/>
+  </defs>
+  <!-- sun rays: only on the sun half -->
+  <g clip-path="url(#sbRight)" filter="url(#sbWob)">
+    <path d="M182.0,100.0 Q186.7,106.2 200.6,113.1 Q185.1,116.1 178.7,120.8 Q181.2,127.9 192.5,138.1 Q176.6,137.1 169.0,140.0 Q169.2,147.5 176.8,160.1 Q161.9,155.1 153.7,155.9 Q151.6,163.1 155.0,177.2 Q142.2,168.6 134.1,167.3 Q129.8,173.7 128.6,188.0 Q119.1,176.5 111.7,173.2 Q105.6,178.3 100.0,191.8 Q94.4,178.3 88.3,173.2 Q80.9,176.5 71.4,188.0 Q70.2,173.7 65.9,167.3 Q57.8,168.6 45.0,177.2 Q48.4,163.1 46.3,155.9 Q38.1,155.1 23.2,160.1 Q30.8,147.5 31.0,140.0 Q23.4,137.1 7.5,138.1 Q18.8,127.9 21.3,120.8 Q14.9,116.1 -0.6,113.1 Q13.3,106.2 18.0,100.0 Q13.3,93.8 -0.6,86.9 Q14.9,83.9 21.3,79.2 Q18.8,72.1 7.5,61.9 Q23.4,62.9 31.0,60.0 Q30.8,52.5 23.2,39.9 Q38.1,44.9 46.3,44.1 Q48.4,36.9 45.0,22.8 Q57.8,31.4 65.9,32.7 Q70.2,26.3 71.4,12.0 Q80.9,23.5 88.3,26.8 Q94.4,21.7 100.0,8.2 Q105.6,21.7 111.7,26.8 Q119.1,23.5 128.6,12.0 Q129.8,26.3 134.1,32.7 Q142.2,31.4 155.0,22.8 Q151.6,36.9 153.7,44.1 Q161.9,44.9 176.8,39.9 Q169.2,52.5 169.0,60.0 Q176.6,62.9 192.5,61.9 Q181.2,72.1 178.7,79.2 Q185.1,83.9 200.6,86.9 Q186.7,93.8 182.0,100.0 Z" fill="url(#sbRay)" stroke="#1b1b1d" stroke-width="2.6" stroke-linejoin="round"/>
+  </g>
+  <!-- bear ear (behind the face) -->
+  <g filter="url(#sbWob)">
+    <circle cx="50" cy="44" r="17" fill="url(#sbIce)" stroke="#1b1b1d" stroke-width="3"/>
+    <circle cx="51" cy="46" r="8" fill="#c9d6ee" opacity=".9"/>
+  </g>
+  <!-- washes -->
+  <g clip-path="url(#sbOval)" filter="url(#sbWash)">
+    <path d="M0,0 H104 C97,44 112,56 104,70 C100,78 114,82 122,90 C126,95 118,100 110,102 C104,105 113,112 110,120 C105,138 113,152 106,200 H0 Z" fill="url(#sbIce)"/>
+    <path d="M200,0 H104 C97,44 112,56 104,70 C100,78 114,82 122,90 C126,95 118,100 110,102 C104,105 113,112 110,120 C105,138 113,152 106,200 H200 Z" fill="url(#sbSun)"/>
+  </g>
+  <!-- snow speckles on the bear side -->
+  <g fill="#ffffff" opacity=".9" clip-path="url(#sbOval)">
+    <circle cx="40" cy="120" r="1.3"/><circle cx="58" cy="146" r="1"/><circle cx="34" cy="96" r=".9"/>
+    <circle cx="76" cy="160" r="1.2"/><circle cx="48" cy="80" r=".8"/><circle cx="88" cy="140" r=".9"/>
+  </g>
+  <!-- outline and profile -->
+  <g fill="none" stroke="#1b1b1d" stroke-linecap="round" stroke-linejoin="round" filter="url(#sbWob)">
+    <ellipse cx="100" cy="100" rx="82" ry="74" stroke-width="3.2"/>
+    <use href="#sbProfile" stroke-width="2.2"/>
+    <!-- bear: sleepy closed eye with lashes -->
+    <path d="M62,76 C68,83 78,83 84,76" stroke-width="2"/>
+    <path d="M66,80 l-3,5 M71,82 l-1.5,5.5 M76,82 l1,5.5 M81,80 l3,4.5" stroke-width="1.5"/>
+    <path d="M63,64 C69,59 77,59 82,63" stroke-width="1.6"/>
+    <!-- shared smile -->
+    <path d="M92,124 C98,130 108,130 114,124" stroke-width="2"/>
+    <!-- sun: brow and lashes -->
+    <path d="M136,58 C141,53 150,53 155,58" stroke-width="1.8"/>
+    <path d="M138,63 l-3,-4 M143,61 l-1,-5 M149,61 l1,-5" stroke-width="1.4"/>
+  </g>
+  <!-- bear nose on the profile -->
+  <ellipse cx="119" cy="92" rx="6" ry="4.6" fill="#1b1b1d" filter="url(#sbWob)"/>
+  <circle cx="117" cy="90.5" r="1.3" fill="#ffffff" opacity=".7"/>
+  <!-- sun: open eye -->
+  <g filter="url(#sbWob)">
+    <ellipse cx="146" cy="76" rx="8.5" ry="11.5" fill="#ffffff" stroke="#1b1b1d" stroke-width="2"/>
+    <ellipse cx="146" cy="79" rx="3.8" ry="5" fill="#1b1b1d"/>
+  </g>
+  <circle cx="147.3" cy="77" r="1.2" fill="#ffffff"/>
+  <!-- sunspots, like the reference sun -->
+  <g clip-path="url(#sbRight)" filter="url(#sbWob)">
+    <g clip-path="url(#sbOval)">
+      <path d="M128,132 C134,124 146,128 152,122 C160,116 170,120 172,128 C174,138 164,140 160,148 C154,156 140,152 134,146 C128,142 124,138 128,132 Z" fill="#e66f0b" opacity=".85"/>
+      <path d="M132,134 C136,130 142,132 144,138 C142,143 136,144 133,140 Z" fill="#fbb04a" opacity=".75"/>
+      <path d="M164,58 C170,54 178,60 176,68 C174,76 168,84 162,80 C158,76 166,70 162,64 C161,61 162,59 164,58 Z" fill="#e66f0b" opacity=".8"/>
+      <path d="M166,94 C171,92 175,96 173,101 C170,104 165,102 164,98 Z" fill="#fbb04a" opacity=".7"/>
+      <circle cx="176" cy="110" r="2.4" fill="#e66f0b" opacity=".8"/>
+      <path d="M122,52 C125,48 129,50 128,56 C127,62 124,66 121,62 C120,58 121,55 122,52 Z" fill="#e66f0b" opacity=".75"/>
+    </g>
+  </g>
+</svg>
