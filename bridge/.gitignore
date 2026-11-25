@@ -1,0 +1,5 @@
+.env
+results/
+notifications.jsonl
+__pycache__/
+static/
