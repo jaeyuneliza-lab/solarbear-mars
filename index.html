@@ -466,6 +466,7 @@ body.booting #intro,body.booting #blurb,body.booting #byline,body.booting .rail,
   <button class="pill" id="bTour">Tour</button>
   <button class="pill" id="bImport">Import from Studio</button>
   <button class="pill run" id="bRun" hidden>Run in Studio</button>
+  <button class="pill" id="bArchive" aria-pressed="false" hidden>#22 archive</button>
   <input type="file" id="runFile" accept="application/pdf,.pdf" hidden>
   <span class="cap live" id="liveTag" hidden></span>
 </div>
@@ -1111,12 +1112,24 @@ async function bridgeInit() {
   tag.hidden = false; tag.classList.toggle('mock', h.mode !== 'live');
   tag.textContent = h.mode === 'live' ? `Studio connected · setting ${h.config_label}` : 'Bridge in mock mode (no API key)';
   $('bRun').hidden = false;
+  // live view: the globe starts empty and fills only with runs made here; the stored results wait behind the archive button
+  archive = cases.splice(0);
+  $('bArchive').hidden = false; $('bArchive').textContent = `#22 archive (${archive.length})`;
   try {
     const list = await (await fetch('api/cases', { cache: 'no-store' })).json();
     list.forEach(c => { try { liveCase(c); } catch (e) {} });
-    if (list.length) { renderStats(); renderQueue(); }
   } catch (e) {}
+  renderStats(); renderQueue();
 }
+let archive = [];
+$('bArchive').onclick = () => {
+  const on = $('bArchive').getAttribute('aria-pressed') !== 'true';
+  $('bArchive').setAttribute('aria-pressed', on);
+  if (on) archive.forEach(a => { if (!cases.some(x => x.id === a.id)) cases.push(a); });
+  else for (let i = cases.length - 1; i >= 0; i--) if (archive.includes(cases[i])) cases.splice(i, 1);
+  renderStats(); renderQueue();
+  toast(on ? 'Showing the stored setting #22 results' : 'Showing live runs only');
+};
 $('bRun').onclick = () => $('runFile').click();
 $('runFile').onchange = async () => {
   const f = $('runFile').files[0]; $('runFile').value = '';

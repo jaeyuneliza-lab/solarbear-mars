@@ -107,10 +107,20 @@ def upload_pdf(pdf, name, run):
     # page conversion runs after upload; a job on a PROCESSING file is refused (409)
     t0 = time.time()
     while time.time() - t0 < 300:
-        st = api("GET", f"/files/{fid}?view=status")
+        st = api("GET", f"/files/{fid}?view=status&pages=none")
         s = str(st.get("status", "")).upper()
         if s in ("UPLOADED", "READY", ""):
-            return fid
+            # The workflow reads only files in its Studio file list. An upload whose
+            # content matches an earlier file points at it via source_file_id, and
+            # repeat uploads chain (new -> earlier upload -> Studio copy): follow to the end.
+            root, seen = fid, {fid}
+            src = st.get("source_file_id")
+            while src and src not in seen and len(seen) < 10:
+                root = src
+                seen.add(src)
+                src = api("GET", f"/files/{src}?view=status&pages=none").get("source_file_id")
+            run["file_id"] = root
+            return root
         if s == "FAILED":
             raise StudioError("file conversion failed: " + json.dumps(st)[:300])
         time.sleep(3)
@@ -125,7 +135,13 @@ def run_job(fid, run):
         "background": True,
         "include": ["all"],
     }
-    job = api("POST", "/responses", body)
+    try:
+        job = api("POST", "/responses", body)
+    except StudioError as e:
+        if "No access to file" in str(e):
+            raise StudioError("This PDF is not in the workflow's Studio file list. Add it to the file list in "
+                              "Studio first, then run it here again (the bridge matches it by content).") from None
+        raise
     jid = job.get("id")
     if not jid:
         raise StudioError("job creation returned no id: " + json.dumps(job)[:300])
@@ -162,7 +178,9 @@ def loose_json(text):
     t = text.strip()
     t = re.sub(r"^```(?:json)?", "", t).rstrip("`").strip()
     try:
-        return [json.loads(t)]
+        v = json.loads(t)
+        # Instruct nodes return their JSON as a JSON-encoded string
+        return loose_json(v) if isinstance(v, str) and v.strip()[:1] in "{[" else [v]
     except ValueError:
         pass
     out, depth, start, in_s, esc = [], 0, -1, False, False
@@ -271,6 +289,8 @@ def save_case(case):
 def load_cases():
     out = []
     for p in sorted(RESULTS.glob("*.json")):
+        if p.name.startswith("_"):   # raw responses kept for debugging
+            continue
         try:
             out.append(json.loads(p.read_text(encoding="utf-8")))
         except ValueError:
@@ -406,7 +426,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
-    srv = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    # no address reuse: on Windows it lets a second bridge share the port and answer with stale code
+    http.server.ThreadingHTTPServer.allow_reuse_address = False
+    http.server.ThreadingHTTPServer.allow_reuse_port = False
+    try:
+        srv = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    except OSError:
+        print(f"Port {PORT} is already in use: a bridge is probably running already. Close its window first.", flush=True)
+        return
     mode = "MOCK (no UPSTAGE_API_KEY; replaying stored setting #22 outputs)" if MOCK else f"LIVE  {AGENT} / {CONFIG} ({CONFIG_LABEL})"
     print(f"Solar Bear bridge on http://127.0.0.1:{PORT}  mode: {mode}", flush=True)
     srv.serve_forever()
